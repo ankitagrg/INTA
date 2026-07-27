@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Env files
+.env
+client/.env
+server/.env
+
+# Build output
+dist/
+build/
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Xenova transformer model cache (large, downloaded on first run)
+server/.cache/
