@@ -1,10 +1,11 @@
 const jwt = require("jsonwebtoken");
+const AppError = require("../utils/AppError");
 
 const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized, no token provided" });
+    return next(new AppError("Not authorized, no token provided", 401));
   }
 
   const token = authHeader.split(" ")[1];
@@ -14,7 +15,7 @@ const protect = (req, res, next) => {
     req.user = decoded; // { id, role }
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Not authorized, token invalid or expired" });
+    next(new AppError("Not authorized, token invalid or expired", 401));
   }
 };
 

@@ -2,6 +2,13 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const { notFound, errorHandler } = require("./middleware/errorHandler");
+const { sendSuccess } = require("./utils/apiResponse");
+
+if (!process.env.JWT_SECRET) {
+  console.error("Missing required env var: JWT_SECRET");
+  process.exit(1);
+}
 
 const authRoutes = require("./routes/authRoutes");
 const sessionRoutes = require("./routes/sessionRoutes");
@@ -14,23 +21,16 @@ app.use(express.json());
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok", message: "INTA server is running" });
+  sendSuccess(res, 200, "INTA server is running");
 });
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/sessions", sessionRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Something went wrong", error: err.message });
-});
+// 404 + centralized error handling (must be registered last)
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
