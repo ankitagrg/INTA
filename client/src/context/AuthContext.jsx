@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import api from "../services/api";
+import { createContext, useState, useEffect } from "react";
+import * as authService from "../services/authService";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+    const data = await authService.login(email, password);
     localStorage.setItem("inta_token", data.token);
     localStorage.setItem("inta_user", JSON.stringify(data.user));
     setUser(data.user);
@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
   };
 
   const signup = async (name, email, password) => {
-    const { data } = await api.post("/auth/signup", { name, email, password });
+    const data = await authService.signup(name, email, password);
     localStorage.setItem("inta_token", data.token);
     localStorage.setItem("inta_user", JSON.stringify(data.user));
     setUser(data.user);
@@ -44,5 +44,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => useContext(AuthContext);

@@ -1,6 +1,8 @@
 import { useState } from "react";
-import api from "../services/api";
-import { useAuth } from "../context/AuthContext.jsx";
+import * as sessionService from "../services/sessionService";
+import { useAuth } from "../hooks/useAuth.js";
+import { getScoreTextColor, getScoreBadgeColor } from "../utils/scoreColor";
+import BrandIcon from "../components/BrandIcon.jsx";
 
 export default function Session() {
   const { user, logout } = useAuth();
@@ -19,7 +21,7 @@ export default function Session() {
     setLoading(true);
     setFinalResults(null);
     try {
-      const { data } = await api.post("/sessions/start", { category: cat });
+      const data = await sessionService.startSession(cat);
       setSession(data.session);
       setQuestion(data.question);
       setEvaluation(null);
@@ -36,7 +38,7 @@ export default function Session() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await api.post("/sessions/answer", {
+      const data = await sessionService.submitAnswer({
         sessionId: session._id,
         questionId: question._id,
         answerText: answer,
@@ -53,7 +55,7 @@ export default function Session() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await api.get(`/sessions/${session._id}/next-question`);
+      const data = await sessionService.getNextQuestion(session._id);
       if (data.question) {
         setQuestion(data.question);
         setAnswer("");
@@ -61,8 +63,8 @@ export default function Session() {
       } else {
         setQuestion(null);
         // Fetch final results when interview ends
-        const resultsRes = await api.get(`/sessions/${session._id}/results`);
-        setFinalResults(resultsRes.data);
+        const results = await sessionService.getSessionResults(session._id);
+        setFinalResults(results);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Could not fetch next question");
@@ -72,6 +74,13 @@ export default function Session() {
   };
 
   const exitSession = () => {
+    // Only mark the session complete if it was actually abandoned mid-interview
+    // (not when dismissing results that are already finalized).
+    if (session && !finalResults) {
+      sessionService.completeSession(session._id).catch(() => {
+        // Best-effort cleanup — don't block the user from leaving even if this fails.
+      });
+    }
     setSession(null);
     setQuestion(null);
     setAnswer("");
@@ -87,18 +96,7 @@ export default function Session() {
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={exitSession}>
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-[0_2px_10px_rgba(37,99,235,0.2)]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4 text-white"
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+              <BrandIcon />
             </div>
             <span className="text-lg font-bold tracking-tight text-slate-900">INTA</span>
           </div>
@@ -283,23 +281,41 @@ export default function Session() {
               <div className="space-y-6 pt-4 border-t border-slate-100 animate-fade-in">
                 
                 {/* Score Summary Box */}
-                <div className="rounded-2xl border border-slate-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-50/50">
-                  <div className="space-y-2">
+                <div className="rounded-2xl border border-slate-100 p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 bg-slate-50/50">
+                  <div className="space-y-3 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">AI Evaluation Feedback</p>
-                    <p className="text-sm font-semibold text-slate-800 leading-relaxed">
-                      {evaluation.feedback}
-                    </p>
+                    {evaluation.strengths?.length > 0 && (
+                      <div className="space-y-1">
+                        {evaluation.strengths.map((s, idx) => (
+                          <p key={idx} className="text-sm text-emerald-700 flex items-start gap-1.5">
+                            <span>✓</span><span>{s}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {evaluation.weaknesses?.length > 0 && (
+                      <div className="space-y-1">
+                        {evaluation.weaknesses.map((w, idx) => (
+                          <p key={idx} className="text-sm text-amber-700 flex items-start gap-1.5">
+                            <span>!</span><span>{w}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {evaluation.suggestions?.length > 0 && (
+                      <div className="space-y-1">
+                        {evaluation.suggestions.map((s, idx) => (
+                          <p key={idx} className="text-sm text-slate-600 flex items-start gap-1.5">
+                            <span>→</span><span>{s}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-center justify-center shrink-0 border-l border-slate-100 pl-6 md:w-36 text-center">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Score</span>
-                    <span className={`text-4xl font-extrabold tracking-tight mt-1 ${
-                      evaluation.compositeScore >= 75
-                        ? "text-emerald-600"
-                        : evaluation.compositeScore >= 40
-                        ? "text-amber-500"
-                        : "text-red-500"
-                    }`}>
-                      {evaluation.compositeScore}%
+                    <span className={`text-4xl font-extrabold tracking-tight mt-1 ${getScoreTextColor(evaluation.finalScore)}`}>
+                      {evaluation.finalScore}%
                     </span>
                   </div>
                 </div>
@@ -312,12 +328,12 @@ export default function Session() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold text-slate-600">
                         <span>Conceptual Alignment (Transformers)</span>
-                        <span>{Math.round(evaluation.semanticSimilarity * 100)}%</span>
+                        <span>{Math.round(evaluation.semanticScore * 100)}%</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-slate-100">
                         <div
                           className="h-2 rounded-full bg-blue-600 transition-all duration-500"
-                          style={{ width: `${evaluation.semanticSimilarity * 100}%` }}
+                          style={{ width: `${evaluation.semanticScore * 100}%` }}
                         ></div>
                       </div>
                     </div>
@@ -354,12 +370,12 @@ export default function Session() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold text-slate-600">
                         <span>Keyword Coverage</span>
-                        <span>{Math.round(evaluation.keywordMatchScore * 100)}%</span>
+                        <span>{Math.round(evaluation.keywordScore * 100)}%</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-slate-100">
                         <div
                           className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
-                          style={{ width: `${evaluation.keywordMatchScore * 100}%` }}
+                          style={{ width: `${evaluation.keywordScore * 100}%` }}
                         ></div>
                       </div>
                     </div>
@@ -429,13 +445,7 @@ export default function Session() {
                 <p className="text-xs text-slate-400 mt-1">Average calculated across all question attempts.</p>
               </div>
               <div className="text-right shrink-0">
-                <span className={`text-4xl font-extrabold tracking-tight ${
-                  finalResults.overallScore >= 75
-                    ? "text-emerald-600"
-                    : finalResults.overallScore >= 40
-                    ? "text-amber-500"
-                    : "text-red-500"
-                }`}>
+                <span className={`text-4xl font-extrabold tracking-tight ${getScoreTextColor(finalResults.overallScore)}`}>
                   {finalResults.overallScore}%
                 </span>
               </div>
@@ -452,22 +462,19 @@ export default function Session() {
                     <div key={resp._id} className="p-5 space-y-3 bg-white hover:bg-slate-50/50 transition">
                       <div className="flex justify-between items-start gap-4">
                         <h4 className="text-sm font-bold text-slate-800">{qText}</h4>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-lg shrink-0 ${
-                          resp.evaluation?.compositeScore >= 75
-                            ? "text-emerald-600 bg-emerald-50"
-                            : resp.evaluation?.compositeScore >= 40
-                            ? "text-amber-600 bg-amber-50"
-                            : "text-red-600 bg-red-50"
-                        }`}>
-                          {resp.evaluation?.compositeScore || 0}%
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-lg shrink-0 ${getScoreBadgeColor(resp.evaluation?.finalScore || 0)}`}>
+                          {resp.evaluation?.finalScore || 0}%
                         </span>
                       </div>
                       <div className="text-xs text-slate-600 italic bg-slate-50/50 p-3 rounded-xl border border-slate-100/60 leading-relaxed">
                         " {resp.answerText} "
                       </div>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        <span className="font-bold text-slate-600">Feedback:</span> {resp.evaluation?.feedback}
-                      </p>
+                      {(resp.evaluation?.suggestions?.[0] || resp.evaluation?.strengths?.[0]) && (
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          <span className="font-bold text-slate-600">Feedback:</span>{" "}
+                          {resp.evaluation?.suggestions?.[0] || resp.evaluation?.strengths?.[0]}
+                        </p>
+                      )}
                     </div>
                   );
                 })}

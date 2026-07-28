@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useAuth } from "../hooks/useAuth.js";
+import AuthLayout from "../layouts/AuthLayout.jsx";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -27,35 +28,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f0f4ff] to-[#f8f9ff] flex flex-col items-center justify-between py-10 px-4 font-sans selection:bg-violet-100 selection:text-violet-900">
-      {/* Top Brand Header */}
-      <div className="flex flex-col items-center space-y-3 mt-4">
-        {/* Brand Logo */}
-        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_4px_20px_rgba(37,99,235,0.08)] border border-slate-100">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-6 h-6 text-blue-600"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            <path d="M12 7v6" />
-            <path d="M9 10h6" />
-          </svg>
-        </div>
-        <span className="text-xl font-bold tracking-tight text-slate-900">INTA</span>
-        
-        {/* Header Text */}
-        <div className="text-center space-y-1.5">
-          <h1 className="text-3xl font-bold text-[#0e1628] tracking-tight">Create account</h1>
-          <p className="text-sm text-slate-500">Start practicing interviews today</p>
-        </div>
-      </div>
-
+    <AuthLayout title="Create account" subtitle="Start practicing interviews today">
       {/* Main Card */}
       <div className="w-full max-w-[440px] bg-white rounded-[32px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100/80 my-8">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -205,6 +178,6 @@ export default function Signup() {
           <span>© 2026</span>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
