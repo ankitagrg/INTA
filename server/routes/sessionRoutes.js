@@ -6,6 +6,7 @@ const {
   completeSession,
   getNextQuestion,
   getSessionResults,
+  getDashboard,
 } = require("../controllers/sessionController");
 const { protect } = require("../middleware/authMiddleware");
 const {
@@ -18,6 +19,7 @@ const router = express.Router();
 
 router.post("/start", protect, validateStartSession, startSession);
 router.get("/current", protect, getCurrentSession);
+router.get("/dashboard", protect, getDashboard);
 router.post("/answer", protect, validateSubmitAnswer, submitAnswer);
 router.post("/:sessionId/complete", protect, validateSessionIdParam, completeSession);
 router.get("/:sessionId/next-question", protect, validateSessionIdParam, getNextQuestion);
