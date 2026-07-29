@@ -19,18 +19,26 @@ sentiment analysis, and keyword extraction — no paid external AI API required.
 INTA/
 ├── client/                  # React frontend
 │   └── src/
-│       ├── pages/            # Landing, Login, Signup, Session
-│       ├── context/          # AuthContext
-│       ├── services/         # Axios instance
-│       └── routes/           # ProtectedRoute
+│       ├── api/               # Axios client instance
+│       ├── assets/            # Static assets (images, fonts, etc.)
+│       ├── components/        # Shared reusable UI (e.g. BrandIcon)
+│       ├── context/           # AuthContext (auth state provider)
+│       ├── hooks/              # useAuth, and other shared hooks
+│       ├── layouts/           # Shared page shells (e.g. AuthLayout)
+│       ├── pages/              # Landing, Login, Signup, Session
+│       ├── routes/            # ProtectedRoute
+│       ├── services/          # authService, sessionService (API call wrappers)
+│       └── utils/              # Shared helpers (e.g. scoreColor)
 ├── server/                  # Node/Express backend
 │   ├── config/db.js
 │   ├── models/               # User, Question, InterviewSession, Response, EvaluationResult
 │   ├── controllers/
 │   ├── routes/
 │   ├── middleware/
+│   ├── validators/            # Request validation middleware
+│   ├── utils/                  # Shared helpers (e.g. generateToken)
 │   ├── services/ai/          # TF-IDF, semantic similarity, grammar, sentiment, keyword, engine
-│   └── seed.js                # sample interview questions
+│   └── seed/seed.js           # sample interview questions
 └── README.md
 ```
 
@@ -49,9 +57,19 @@ cp .env.example .env
 # Edit .env: set MONGO_URI and JWT_SECRET
 ```
 
+If `MONGO_URI` points at our shared MongoDB Atlas cluster, you must whitelist
+your current IP before you can connect:
+1. Go to https://cloud.mongodb.com → the project → **Network Access**
+2. Click **Add IP Address** → **Add Current IP Address** → **Confirm**
+3. Wait ~30-60s, then retry
+
+Do this again any time you're on a new network (new wifi, VPN, mobile hotspot,
+etc.) — Atlas rejects connections from IPs not on the list. Do **not** add
+`0.0.0.0/0` (allow from anywhere) to the shared cluster.
+
 Seed sample questions (do this once, so the interview flow has data to serve):
 ```bash
-node seed.js
+npm run seed
 ```
 
 Test the AI evaluation engine standalone before running the full server
@@ -96,5 +114,5 @@ Frontend runs at `http://localhost:5173` and proxies `/api` requests to the back
 - Ankita Gurung
 - Sabina Karki
 
-Supervisor: Er. Ranjan Adhikari
+Project Supervisor: Er. Ranjan Adhikari
 Project Coordinator: Er. Santosh Panth
