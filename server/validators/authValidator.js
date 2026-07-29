@@ -29,4 +29,24 @@ const validateLogin = (req, res, next) => {
   next();
 };
 
-module.exports = { validateSignup, validateLogin };
+const validateRefreshToken = (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (typeof refreshToken !== "string" || !refreshToken.trim()) {
+    return res.status(400).json({ success: false, message: "refreshToken is required" });
+  }
+
+  next();
+};
+
+const validateGoogleAuth = (req, res, next) => {
+  const { credential } = req.body;
+
+  if (typeof credential !== "string" || !credential.trim()) {
+    return res.status(400).json({ success: false, message: "credential is required" });
+  }
+
+  next();
+};
+
+module.exports = { validateSignup, validateLogin, validateRefreshToken, validateGoogleAuth };
