@@ -24,3 +24,8 @@ export async function completeSession(sessionId) {
   const { data } = await api.post(`/sessions/${sessionId}/complete`);
   return data;
 }
+
+export async function getDashboard() {
+  const { data } = await api.get("/sessions/dashboard");
+  return data;
+}
