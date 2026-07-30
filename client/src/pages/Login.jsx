@@ -1,1 +1,1 @@
-cksabja
+cksab
